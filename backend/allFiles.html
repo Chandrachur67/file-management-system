@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <title>File List</title>
+</head>
+
+<style>
+    .container {
+        max-width: 600px;
+    }
+</style>
+
+<body class="bg-gray-100 font-sans p-8 mt-10 flex justify-center">
+    <div class="max-w-600 flex flex-col justify-center items-center container">
+        <h1 class="text-4xl font-bold mb-8 text-blue-600 w-full">Your Uploaded Files</h1>
+        <ul id="fileList" class="list-disc pl-8 w-full"></ul>
+
+        <div class="mt-8">
+            <a href="/" class="text-blue-500 hover:underline mr-4">Home</a>
+            <a href="/upload-file" class="text-blue-500 hover:underline">Upload File</a>
+        </div>
+    </div>
+    <script>
+        const existingToken = localStorage.getItem('tokennn');
+
+        if (!existingToken) {
+            window.location.replace("/");
+        }
+
+        async function fetchFiles() {
+            try {
+                const response = await fetch('/files', {
+                    headers: {
+                        'tokennn': localStorage.getItem('tokennn'),
+                    }
+                });
+
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${ response.status }`);
+                }
+
+                const { files } = await response.json();
+                updateFileList(files);
+            } catch (error) {
+                console.error('Error fetching files:', error);
+            }
+        }
+
+        function updateFileList(files) {
+            const fileListElement = document.getElementById('fileList');
+            fileListElement.innerHTML = '';
+
+            files.forEach(file => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('flex', 'items-center', 'justify-between', 'border-b', 'border-gray-300', 'py-4');
+
+                listItem.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="${ getFileIconClass(file.file) } mr-4 text-xl"></i>
+                        <span class="text-gray-800">${ file.file }</span>
+                    </div>
+                    <button class="bg-blue-500 text-white py-1 px-2 rounded"
+                        onclick="downloadFile('${ file.file }')">Download</button>
+                `;
+
+                fileListElement.appendChild(listItem);
+            });
+        }
+
+
+        function getFileIconClass(fileName) {
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+
+            switch (fileExtension) {
+                case 'pdf':
+                    return 'far fa-file-pdf text-red-500';
+                case 'png':
+                case 'jpg':
+                case 'jpeg':
+                    return 'far fa-file-image text-green-500';
+                case 'mp4':
+                case 'avi':
+                case 'mov':
+                    return 'far fa-file-video text-blue-500';
+                case 'cpp':
+                    return 'far fa-file-code text-orange-500'; // .cpp file
+                case 'java':
+                    return 'far fa-file-code text-purple-500'; // .java file
+                case 'js':
+                    return 'fab fa-js text-yellow-500'; // .js file (assuming you're using Font Awesome for JS)
+                // Add more cases for other file types as needed
+                default:
+                    return 'far fa-file text-gray-500';
+            }
+        }
+
+
+
+        async function downloadFile(fileName) {
+            try {
+                const response = await fetch(`/download?fileName=${ fileName }`, {
+                    headers: {
+                        'tokennn': localStorage.getItem('tokennn'),
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${ response.status }`);
+                }
+
+                const fileContentBlob = await response.blob();
+
+                const url = URL.createObjectURL(fileContentBlob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error downloading file:', error);
+            }
+        }
+
+        window.onload = fetchFiles;
+    </script>
+</body>
+
+</html>
